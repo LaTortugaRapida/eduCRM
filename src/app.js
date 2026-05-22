@@ -6,6 +6,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const crmRoutes = require('./routes/crmRoutes');
+const pool = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +23,26 @@ app.use(express.static(frontendPath));
 
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date() });
+});
+
+app.get('/health/db', async (req, res) => {
+    try {
+        const diagnostics = await pool.getDiagnostics();
+        res.status(diagnostics.ok ? 200 : 500).json({
+            status: diagnostics.ok ? 'OK' : 'ERROR',
+            database: diagnostics
+        });
+    } catch (error) {
+        console.error('Database health check error:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            database: {
+                ok: false,
+                status: 'connection_error',
+                code: error.code || 'UNKNOWN'
+            }
+        });
+    }
 });
 
 app.get('/reset-password/:token', (req, res) => {

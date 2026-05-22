@@ -13,9 +13,12 @@ Deploy the Express app from `src/app.js` to a Node host such as Render, Railway,
 NODE_ENV=production
 PORT=3000
 DB_HOST=your-production-mysql-host
+DB_PORT=3306
 DB_USER=your-production-mysql-user
 DB_PASSWORD=your-production-mysql-password
 DB_NAME=your-production-database
+DB_SSL=false
+DB_SSL_REJECT_UNAUTHORIZED=true
 JWT_SECRET=replace_with_a_long_random_secret
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -24,7 +27,15 @@ SMTP_PASS=your-app-password
 FRONTEND_URL=https://your-netlify-site.netlify.app
 ```
 
-Run the SQL in `database/` against the production MySQL database before using the app.
+If your MySQL provider requires encrypted connections, set `DB_SSL=true`. Some providers with self-signed certificates also need `DB_SSL_REJECT_UNAUTHORIZED=false`.
+
+Run `database/production_schema.sql` against the production MySQL database before using the app. After deployment, open:
+
+```text
+https://your-api-host.com/health/db
+```
+
+It should return `status: "OK"`. If it returns `configuration_error`, a Render environment variable is missing. If it returns `schema_error`, run or repair the production schema.
 
 ## 2. Deploy the frontend to Netlify
 
@@ -49,12 +60,4 @@ Set the backend `FRONTEND_URL` to your Netlify URL. Netlify is configured to rew
 
 ## 4. Important Git cleanup
 
-This repository currently has `node_modules/` and `.env` tracked in Git. Before pushing to GitHub for Netlify, untrack them:
-
-```bash
-git rm -r --cached node_modules .env
-git add .gitignore .env.example
-git commit -m "Prepare Netlify deployment"
-```
-
-If `.env` ever contained real secrets, rotate those credentials before deploying.
+Keep `.env` and `node_modules/` out of Git. If `.env` ever contained real secrets, rotate those credentials before deploying.
