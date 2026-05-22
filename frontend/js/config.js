@@ -1,4 +1,13 @@
-﻿var API_URL = 'https://edu-crm-api-7b35.onrender.com/api';
+var API_URL = (function() {
+    var env = window.__ENV__ || {};
+    var configuredUrl = env.API_BASE_URL || env.API_URL || '';
+    var hostname = window.location.hostname;
+    var isLocal = !hostname || hostname === 'localhost' || hostname === '127.0.0.1';
+    var fallbackUrl = isLocal ? 'http://localhost:3000/api' : 'https://edu-crm-api-7b35.onrender.com/api';
+    var url = configuredUrl || fallbackUrl;
+
+    return String(url).replace(/\/$/, '');
+})();
 
 function showToast(message, type) {
     type = type || 'success';
