@@ -1,0 +1,162 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduCRM - Create Account</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="auth-page auth-shell signup-auth">
+    <div class="auth-card">
+        <div class="auth-title">
+            <div class="auth-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="icon">
+                    <path d="M22 10L12 5 2 10l10 5 10-5Z"></path>
+                    <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                </svg>
+            </div>
+            <h1>Create Your Account</h1>
+            <p>Join EduCRM and transform your educational management</p>
+        </div>
+
+        <div class="tab-row">
+            <button class="tab-btn active" data-tab="individual" type="button">
+                <span class="tab-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" class="icon">
+                        <path d="M20 21a8 8 0 0 0-16 0"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </span>
+                <div class="tab-label">
+                    <strong>Individual</strong>
+                    <small>For teachers & staff</small>
+                </div>
+            </button>
+            <button class="tab-btn" data-tab="company" type="button">
+                <span class="tab-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" class="icon">
+                        <path d="M3 21h18"></path>
+                        <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
+                        <path d="M9 8h1"></path>
+                        <path d="M14 8h1"></path>
+                        <path d="M9 12h1"></path>
+                        <path d="M14 12h1"></path>
+                        <path d="M9 16h1"></path>
+                        <path d="M14 16h1"></path>
+                    </svg>
+                </span>
+                <div class="tab-label">
+                    <strong>Company</strong>
+                    <small>For institutions</small>
+                </div>
+            </button>
+        </div>
+
+        <!-- Individual Form -->
+        <form id="individualForm" class="form-block active">
+            <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="indName" class="form-control" placeholder="John Doe" required>
+                <span class="form-error" id="indNameError"></span>
+            </div>
+            <div class="form-group">
+                <label>Your Email Address *</label>
+                <input type="email" id="indEmail" class="form-control" placeholder="john@example.com" required>
+                <span class="form-error" id="indEmailError"></span>
+            </div>
+            <div class="form-group">
+                <label>Phone Number *</label>
+                <input type="tel" id="indPhone" class="form-control" placeholder="+1 234 567 8900" required>
+                <span class="form-error" id="indPhoneError"></span>
+            </div>
+            <div class="form-group">
+                <label>Position</label>
+                <select id="indPosition" class="form-control">
+                    <option value="">Select position (optional)</option>
+                    <option value="Teacher">Teacher</option>
+                    <option value="Administrator">Administrator</option>
+                    <option value="Principal">Principal</option>
+                    <option value="Counselor">Counselor</option>
+                    <option value="Coordinator">Coordinator</option>
+                    <option value="Staff">Staff</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Your Institution Email *</label>
+                <input type="email" id="indInstitution" class="form-control" placeholder="company@institution.com" required>
+                <span class="form-error" id="indInstitutionError"></span>
+                <span class="form-hint">Enter your institution's registered email to link your account</span>
+            </div>
+            <div class="form-group">
+                <label>Password *</label>
+                <input type="password" id="indPassword" class="form-control" placeholder="Minimum 8 characters" required minlength="8">
+                <div class="password-meter"><div class="pw-bar" id="indPwBar"></div></div>
+                <span class="form-error" id="indPasswordError"></span>
+            </div>
+            <div class="form-group">
+                <label>Confirm Password *</label>
+                <input type="password" id="indConfirmPassword" class="form-control" placeholder="Re-enter password" required>
+                <span class="form-error" id="indConfirmPasswordError"></span>
+            </div>
+            <button type="submit" class="btn btn-primary" id="indSubmitBtn" style="width:100%; padding:0.85rem;">
+                <span class="btn-text">Create Individual Account</span>
+            </button>
+        </form>
+
+        <!-- Company Form -->
+        <form id="companyForm" class="form-block">
+            <div class="form-section-title">Company Information</div>
+            <div class="form-group">
+                <label>Company/Institute Name *</label>
+                <input type="text" id="compName" class="form-control" placeholder="ABC International School" required>
+                <span class="form-error" id="compNameError"></span>
+            </div>
+            <div class="form-group">
+                <label>Company Email *</label>
+                <input type="email" id="compEmail" class="form-control" placeholder="info@abcschool.com" required>
+                <span class="form-error" id="compEmailError"></span>
+            </div>
+            <div class="form-group">
+                <label>Company Phone *</label>
+                <input type="tel" id="compPhone" class="form-control" placeholder="+1 234 567 8900" required>
+                <span class="form-error" id="compPhoneError"></span>
+            </div>
+            <div class="form-section-title">Owner Information</div>
+            <div class="form-group">
+                <label>Owner's Full Name *</label>
+                <input type="text" id="ownerName" class="form-control" placeholder="Jane Smith" required>
+                <span class="form-error" id="ownerNameError"></span>
+            </div>
+            <div class="form-group">
+                <label>Owner's Phone *</label>
+                <input type="tel" id="ownerPhone" class="form-control" placeholder="+1 987 654 3210" required>
+                <span class="form-error" id="ownerPhoneError"></span>
+            </div>
+            <div class="form-section-title">Security</div>
+            <div class="form-group">
+                <label>Password *</label>
+                <input type="password" id="compPassword" class="form-control" placeholder="Minimum 8 characters" required minlength="8">
+                <div class="password-meter"><div class="pw-bar" id="compPwBar"></div></div>
+                <span class="form-error" id="compPasswordError"></span>
+            </div>
+            <div class="form-group">
+                <label>Confirm Password *</label>
+                <input type="password" id="compConfirmPassword" class="form-control" placeholder="Re-enter password" required>
+                <span class="form-error" id="compConfirmPasswordError"></span>
+            </div>
+            <button type="submit" class="btn btn-primary" id="compSubmitBtn" style="width:100%; padding:0.85rem;">
+                <span class="btn-text">Register Company</span>
+            </button>
+        </form>
+
+        <div class="form-footer">
+            <p>Already have an account? <a href="login.html">Login here</a></p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script src="../js/config.js"></script>
+    <script src="../js/signup.js"></script>
+</body>
+</html>

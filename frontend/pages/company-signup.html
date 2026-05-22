@@ -1,0 +1,101 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduCRM - Company Sign Up</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="auth-page auth-shell">
+    <div class="signup-container">
+        <div class="signup-card">
+            <div class="signup-header">
+                <h1>
+                    <span class="heading-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M3 21h18"></path>
+                            <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
+                            <path d="M9 8h1"></path>
+                            <path d="M14 8h1"></path>
+                            <path d="M9 12h1"></path>
+                            <path d="M14 12h1"></path>
+                            <path d="M9 16h1"></path>
+                            <path d="M14 16h1"></path>
+                        </svg>
+                    </span>
+                    EduCRM
+                </h1>
+                <p>Register your educational institution</p>
+            </div>
+
+            <form id="companySignupForm">
+                <div class="form-section">
+                    <h3>Company Information</h3>
+                    
+                    <div class="form-group">
+                        <label for="companyName">Company/Institute Name *</label>
+                        <input type="text" id="companyName" placeholder="Enter company name" required>
+                        <span class="error-message" id="companyNameError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="companyEmail">Company Email *</label>
+                        <input type="email" id="companyEmail" placeholder="company@email.com" required>
+                        <span class="error-message" id="companyEmailError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="companyPhone">Company Phone *</label>
+                        <input type="tel" id="companyPhone" placeholder="+1 234 567 8900" required>
+                        <span class="error-message" id="companyPhoneError"></span>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Owner Information</h3>
+                    
+                    <div class="form-group">
+                        <label for="ownerName">Owner's Full Name *</label>
+                        <input type="text" id="ownerName" placeholder="Enter owner's name" required>
+                        <span class="error-message" id="ownerNameError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ownerPhone">Owner's Phone *</label>
+                        <input type="tel" id="ownerPhone" placeholder="Owner's phone number" required>
+                        <span class="error-message" id="ownerPhoneError"></span>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Security</h3>
+                    
+                    <div class="form-group">
+                        <label for="password">Password *</label>
+                        <input type="password" id="password" placeholder="Minimum 8 characters" required minlength="8">
+                        <span class="error-message" id="passwordError"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password *</label>
+                        <input type="password" id="confirmPassword" placeholder="Re-enter your password" required>
+                        <span class="error-message" id="confirmPasswordError"></span>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Register Company</button>
+
+                <div class="form-footer">
+                    <p>Already have an account? <a href="login.html">Login here</a></p>
+                    <p>Registering as an individual? <a href="individual-signup.html">Individual Sign Up</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/company-signup.js"></script>
+</body>
+</html>

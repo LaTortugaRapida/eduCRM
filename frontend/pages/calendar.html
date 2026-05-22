@@ -1,0 +1,309 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduCRM - Calendar</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+    <style>
+        #calendar {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(27,40,56,0.06);
+        }
+        .fc-toolbar-title {
+            font-family: 'Poppins', sans-serif !important;
+            color: #1B2838 !important;
+        }
+        .fc-button-primary {
+            background: linear-gradient(135deg, #351E28, #5B1E32) !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 500 !important;
+            text-transform: capitalize !important;
+        }
+        .fc-button-primary:hover {
+            opacity: 0.9 !important;
+        }
+        .fc-button-active {
+            background: #5B1E32 !important;
+        }
+        .fc-day-today {
+            background: rgba(183,225,218,0.2) !important;
+        }
+        .fc-daygrid-day-number {
+            color: #1B2838;
+            font-weight: 500;
+        }
+        .fc-event {
+            border-radius: 6px !important;
+            padding: 4px 8px !important;
+            font-size: 0.8rem !important;
+            border: none !important;
+            cursor: pointer;
+        }
+        .fc-event-high {
+            background: #E74C3C !important;
+        }
+        .fc-event-medium {
+            background: #F39C12 !important;
+        }
+        .fc-event-low {
+            background: #27AE60 !important;
+        }
+        .modal-overlay { display: none; }
+        .modal-overlay.show { display: block; }
+    </style>
+</head>
+<body class="dashboard-shell">
+    <nav class="dash-nav">
+        <div class="dash-nav-inner">
+            <div style="display:flex; align-items:center; gap:2rem;">
+                <a href="../index.html" class="logo">
+                    <div class="logo-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M22 10L12 5 2 10l10 5 10-5Z"></path>
+                            <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                            <path d="M22 10v6"></path>
+                        </svg>
+                    </div>
+                    <span class="logo-text">EduCRM</span>
+                </a>
+                <ul style="display:flex; gap:0.3rem; list-style:none;">
+                    <li><a href="dashboard.html" class="nav-page-link">Dashboard</a></li>
+                    <li><a href="pipeline.html" class="nav-page-link">Pipeline</a></li>
+                    <li><a href="calendar.html" class="nav-page-link active">Calendar</a></li>
+                    <li><a href="profile.html" class="nav-page-link">Profile</a></li>
+                </ul>
+            </div>
+            <div class="dash-user">
+                <span class="dash-username" id="userNameDisplay"></span>
+                <button onclick="logout()" class="btn btn-outline btn-sm">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div style="padding:80px 2rem 2rem 2rem;">
+        <div id="calendar"></div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-head">
+                <h3 id="modalTitle">Add Task</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    <div class="form-group">
+                        <label>Task Title *</label>
+                        <input type="text" id="taskTitle" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date</label>
+                        <input type="date" id="taskDueDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="taskPriority" class="form-control">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Link Client</label>
+                        <select id="taskClient" class="form-control">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="taskDescription" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button type="submit" class="btn btn-primary" style="flex:1;">Save Task</button>
+                        <button type="button" class="btn btn-outline" style="flex:1;" id="deleteTaskBtn" onclick="deleteTask()" style="display:none;">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="../js/config.js"></script>
+    <script>
+        var token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        var userData = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+        if (!token || !userData) { window.location.href = 'login.html'; }
+        var currentUser = JSON.parse(userData);
+        document.getElementById('userNameDisplay').textContent = currentUser.name || currentUser.company_name || 'User';
+        var selectedDate = null;
+
+        var calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listWeek'
+            },
+            height: 'auto',
+            selectable: true,
+            editable: true,
+            dayMaxEvents: 3,
+            events: API_URL + '/crm/calendar-events',
+            eventSources: [{
+                url: API_URL + '/crm/calendar-events',
+                method: 'GET',
+                extraParams: function() {
+                    return { token: token };
+                },
+                failure: function() {
+                    showToast('Error loading events', 'error');
+                }
+            }],
+            eventClick: function(info) {
+                openEditModal(info.event);
+            },
+            dateClick: function(info) {
+                selectedDate = info.dateStr;
+                openAddModal(info.dateStr);
+            },
+            eventDrop: function(info) {
+                updateTaskDate(info.event.id, info.event.startStr);
+            },
+            eventClassNames: function(arg) {
+                return ['fc-event-' + (arg.event.extendedProps.priority || 'medium')];
+            }
+        });
+
+        calendar.render();
+
+        // Load events with auth
+        fetchEvents();
+        
+        async function fetchEvents() {
+            try {
+                var resp = await fetch(API_URL + '/crm/calendar-events', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (resp.ok) {
+                    var data = await resp.json();
+                    calendar.removeAllEvents();
+                    calendar.addEventSource(data.events);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function openAddModal(date) {
+            document.getElementById('taskId').value = '';
+            document.getElementById('modalTitle').textContent = 'Add Task';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskDueDate').value = date;
+            document.getElementById('taskPriority').value = 'medium';
+            document.getElementById('taskDescription').value = '';
+            document.getElementById('deleteTaskBtn').style.display = 'none';
+            loadClients();
+            document.getElementById('taskModal').classList.add('show');
+        }
+
+        function openEditModal(event) {
+            document.getElementById('taskId').value = event.id;
+            document.getElementById('modalTitle').textContent = 'Edit Task';
+            document.getElementById('taskTitle').value = event.title;
+            document.getElementById('taskDueDate').value = event.startStr;
+            document.getElementById('taskPriority').value = event.extendedProps.priority || 'medium';
+            document.getElementById('taskDescription').value = event.extendedProps.description || '';
+            document.getElementById('deleteTaskBtn').style.display = 'block';
+            loadClients();
+            document.getElementById('taskModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('taskModal').classList.remove('show');
+        }
+
+        async function loadClients() {
+            try {
+                var resp = await fetch(API_URL + '/crm/enrollments', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (resp.ok) {
+                    var data = await resp.json();
+                    var sel = document.getElementById('taskClient');
+                    sel.innerHTML = '<option value="">None</option>';
+                    data.enrollments.forEach(function(e) {
+                        sel.innerHTML += '<option value="' + e.id + '">' + e.client_name + '</option>';
+                    });
+                }
+            } catch(e) {}
+        }
+
+        document.getElementById('taskForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var id = document.getElementById('taskId').value;
+            var title = document.getElementById('taskTitle').value;
+            var date = document.getElementById('taskDueDate').value;
+            var priority = document.getElementById('taskPriority').value;
+            var desc = document.getElementById('taskDescription').value;
+            var client = document.getElementById('taskClient').value || null;
+
+            try {
+                var url = id ? API_URL + '/crm/tasks/' + id : API_URL + '/crm/tasks';
+                var method = id ? 'PUT' : 'POST';
+                var resp = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+                    body: JSON.stringify({ title:title, due_date:date, priority:priority, description:desc, enrollment_id:client })
+                });
+                if (resp.ok) {
+                    showToast(id ? 'Task updated!' : 'Task added!', 'success');
+                    closeModal();
+                    fetchEvents();
+                }
+            } catch(e) { showToast('Error', 'error'); }
+        });
+
+        async function deleteTask() {
+            var id = document.getElementById('taskId').value;
+            if (!id || !confirm('Delete this task?')) return;
+            await fetch(API_URL + '/crm/tasks/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            showToast('Task deleted', 'success');
+            closeModal();
+            fetchEvents();
+        }
+
+        async function updateTaskDate(id, date) {
+            await fetch(API_URL + '/crm/tasks/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+                body: JSON.stringify({ due_date: date })
+            });
+            showToast('Task moved', 'success');
+        }
+
+        function logout() {
+            localStorage.clear(); sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        function showToast(msg, type) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast toast-' + (type||'success') + ' show';
+            setTimeout(function() { t.classList.remove('show'); }, 3000);
+        }
+    </script>
+</body>
+</html>

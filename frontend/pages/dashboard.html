@@ -1,0 +1,426 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduCRM - Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="dashboard-shell">
+    <!-- Header Navigation -->
+    <nav class="dash-nav">
+        <div class="dash-nav-inner">
+            <div class="dash-brand-area">
+                <a href="../index.html" class="logo">
+                    <div class="logo-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M22 10L12 5 2 10l10 5 10-5Z"></path>
+                            <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                            <path d="M22 10v6"></path>
+                        </svg>
+                    </div>
+                    <span class="logo-text">EduCRM</span>
+                </a>
+                <ul class="dash-nav-list">
+                    <li><a href="#" class="nav-page-link active" data-page="dashboard">Dashboard</a></li>
+                    <li><a href="#" class="nav-page-link" data-page="pipeline">Pipeline</a></li>
+                    <li><a href="#" class="nav-page-link" data-page="calendar">Calendar</a></li>
+                    <li><a href="#" class="nav-page-link" data-page="profile">Profile</a></li>
+                    <li><a href="#" class="nav-page-link" data-page="statistics">Statistics</a></li>
+                </ul>
+            </div>
+            <div class="dash-user">
+                <span class="dash-username" id="userNameDisplay"></span>
+                <button onclick="logout()" class="btn btn-outline btn-sm">
+                    <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <path d="M16 17l5-5-5-5"></path>
+                        <path d="M21 12H9"></path>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="dash-content">
+        
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="dash-page active">
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-icon-box si-clients" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-info"><h3 id="totalClients">0</h3><p>Total Clients</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-box si-tasks" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M9 11l3 3L22 4"></path>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-info"><h3 id="activeTasks">0</h3><p>Active Tasks</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-box si-students" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M22 10L12 5 2 10l10 5 10-5Z"></path>
+                            <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-info"><h3 id="totalStudents">0</h3><p>Students</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-box si-revenue" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M12 2v20"></path>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-info"><h3 id="totalProfit">$0</h3><p>Revenue</p></div>
+                </div>
+            </div>
+
+            <div class="section-box">
+                <div class="section-head">
+                    <h2>
+                        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                            <path d="M8 6h13"></path>
+                            <path d="M8 12h13"></path>
+                            <path d="M8 18h13"></path>
+                            <path d="M3 6h.01"></path>
+                            <path d="M3 12h.01"></path>
+                            <path d="M3 18h.01"></path>
+                        </svg>
+                        Recent Enrollments
+                    </h2>
+                    <button class="btn btn-primary btn-sm" onclick="openEnrollmentModal()">
+                        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                            <path d="M12 5v14"></path>
+                            <path d="M5 12h14"></path>
+                        </svg>
+                        Add Enrollment
+                    </button>
+                </div>
+                <div class="enrollment-carousel enroll-carousel enrollment-grid-wrap">
+                    <button class="carousel-arrow" onclick="scrollEnrollments(-1)" aria-label="Previous enrollments">
+                        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                            <path d="M15 18l-6-6 6-6"></path>
+                        </svg>
+                    </button>
+                    <div class="enrollment-track enroll-track" id="enrollmentsTrack"></div>
+                    <button class="carousel-arrow" onclick="scrollEnrollments(1)" aria-label="Next enrollments">
+                        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                            <path d="M9 18l6-6-6-6"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="section-box todo-section">
+                <div class="section-head">
+                    <h2>
+                        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                            <path d="M9 11l3 3L22 4"></path>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        To-Do List
+                    </h2>
+                    <button class="btn btn-primary btn-sm" onclick="openTaskModal()">
+                        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                            <path d="M12 5v14"></path>
+                            <path d="M5 12h14"></path>
+                        </svg>
+                        Add Task
+                    </button>
+                </div>
+                <div id="todoList"></div>
+            </div>
+        </div>
+
+        <!-- Pipeline Page -->
+        <div id="pipelinePage" class="dash-page">
+            <div class="pipeline-heading">
+                <h2>Enrollment Pipeline</h2>
+                <small>Drag client info cards into another column to change status</small>
+            </div>
+            <div class="pipe-grid">
+                <div class="pipe-col" data-status="unaware" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearDropTarget(event)">
+                    <h4><span class="status-dot dot-unaware"></span>Unaware <span class="pipe-count" id="unawareCount">0</span></h4>
+                    <div class="pipe-items" id="unawareCards"></div>
+                </div>
+                <div class="pipe-col" data-status="aware" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearDropTarget(event)">
+                    <h4><span class="status-dot dot-aware"></span>Aware <span class="pipe-count" id="awareCount">0</span></h4>
+                    <div class="pipe-items" id="awareCards"></div>
+                </div>
+                <div class="pipe-col" data-status="interested" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearDropTarget(event)">
+                    <h4><span class="status-dot dot-interested"></span>Interested <span class="pipe-count" id="interestedCount">0</span></h4>
+                    <div class="pipe-items" id="interestedCards"></div>
+                </div>
+                <div class="pipe-col" data-status="student" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearDropTarget(event)">
+                    <h4><span class="status-dot dot-student"></span>Student <span class="pipe-count" id="studentCount">0</span></h4>
+                    <div class="pipe-items" id="studentCards"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Page -->
+        <div id="calendarPage" class="dash-page">
+            <div class="calendar-page-head">
+                <div>
+                    <h2>Calendar</h2>
+                    <p>Plan follow-ups, calls, and client tasks by day.</p>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openTaskModal()">
+                    <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                    Add Task
+                </button>
+            </div>
+            <div class="calendar-layout">
+                <div class="cal-box">
+                    <div class="cal-head">
+                        <button class="cal-nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+                        <h3 id="calendarMonth"></h3>
+                        <button class="cal-nav-btn" onclick="changeMonth(1)">&#8250;</button>
+                    </div>
+                    <div class="cal-grid" id="calendarGrid"></div>
+                </div>
+                
+                <aside class="calendar-side">
+                    <div class="side-card selected-day-card">
+                        <h3>
+                            Tasks for <span id="selectedDate">Today</span>
+                        </h3>
+                        <div id="dayTasks" class="day-tasks">
+                            <div class="empty-block">
+                                <p>Click a date to view tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="side-card">
+                        <h3>Quick Add Task</h3>
+                        <form id="quickTaskForm">
+                            <div class="form-group">
+                                <label>Task Title *</label>
+                                <input type="text" id="quickTaskTitle" class="form-control" placeholder="Enter task title..." required>
+                            </div>
+                            <div class="form-group">
+                                <label>Priority</label>
+                                <select id="quickTaskPriority" class="form-control">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <input type="text" id="quickTaskDescription" class="form-control" placeholder="Brief description...">
+                            </div>
+                            <input type="hidden" id="quickTaskDate">
+                            <button type="submit" class="btn btn-primary btn-sm" style="width:100%;">Add Task to This Day</button>
+                        </form>
+                    </div>
+                    
+                    <div class="side-card compact-card">
+                        <h4>Priority</h4>
+                        <div class="legend-row">
+                            <span><span class="legend-dot legend-high"></span>High</span>
+                            <span><span class="legend-dot legend-medium"></span>Medium</span>
+                            <span><span class="legend-dot legend-low"></span>Low</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="profilePage" class="dash-page">
+            <div class="profile-page-head">
+                <div>
+                    <h2>Profile</h2>
+                    <p>Account, team, and security settings.</p>
+                </div>
+            </div>
+            <div class="profile-layout">
+                <section class="profile-main">
+                    <div class="profile-card" id="profileInfo">
+                        <div class="empty-block">Loading profile...</div>
+                    </div>
+                    <div class="side-card team-panel">
+                        <h2>Team Members</h2>
+                    <div class="team-row" id="teamMembers">
+                        <div class="empty-block">Loading team...</div>
+                    </div>
+                    </div>
+                </section>
+                <aside class="side-card security-card">
+                    <h3>Change Password</h3>
+                    <form id="changePasswordForm">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" id="currentPassword" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="newPassword" class="form-control" required minlength="8">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                    </form>
+                </aside>
+            </div>
+        </div>
+
+        <!-- Statistics Page -->
+        <div id="statisticsPage" class="dash-page">
+            <h2 style="margin-bottom:1.5rem;">Statistics</h2>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-icon-box si-clients" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M7 15l4-4 4 4 5-8"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-info"><h3>Coming Soon</h3><p>Detailed Analytics</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-box si-revenue" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" class="icon">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M7 8l4 4 4-4 5 8"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-info"><h3>Coming Soon</h3><p>Revenue Charts</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrollment Modal -->
+    <div id="enrollmentModal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-head">
+                <h3>New Enrollment</h3>
+                <button class="modal-close" onclick="closeEnrollmentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="enrollmentForm">
+                    <div class="form-group">
+                        <label>Client Name *</label>
+                        <input type="text" id="clientName" class="form-control" placeholder="Enter client name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="clientEmail" class="form-control" placeholder="client@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number *</label>
+                        <input type="tel" id="clientPhone" class="form-control" placeholder="+1 234 567 8900" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Lead Source</label>
+                        <select id="leadSource" class="form-control">
+                            <option value="">Select source</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Advertisement">Advertisement</option>
+                            <option value="Event">Event</option>
+                            <option value="Walk-in">Walk-in</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="enrollmentStatus" class="form-control">
+                            <option value="unaware">Unaware</option>
+                            <option value="aware">Aware</option>
+                            <option value="interested">Interested</option>
+                            <option value="student">Student</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="clientNotes" class="form-control" rows="3" placeholder="Additional notes..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Save Enrollment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-head">
+                <h3>Add Task</h3>
+                <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <div class="form-group">
+                        <label>Task Title *</label>
+                        <input type="text" id="taskTitle" class="form-control" placeholder="Enter task title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="taskDescription" class="form-control" rows="2" placeholder="Task description..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Link to Client</label>
+                        <select id="taskEnrollment" class="form-control">
+                            <option value="">No client linked</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="taskPriority" class="form-control">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date</label>
+                        <input type="date" id="taskDueDate" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Add Task</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div id="taskDetailModal" class="modal-overlay">
+        <div class="modal-dialog task-detail-dialog">
+            <div class="modal-head">
+                <h3>Task Details</h3>
+                <button class="modal-close" onclick="closeTaskDetailModal()" aria-label="Close task details">
+                    <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="taskDetailBody"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/dashboard.js"></script>
+</body>
+</html>
