@@ -1,4 +1,4 @@
-﻿var API_URL = 'http://localhost:3000/api';
+﻿var API_URL = 'https://edu-crm-api-7b35.onrender.com/api';
 
 function showToast(message, type) {
     type = type || 'success';
