@@ -11,32 +11,29 @@ class Enrollment {
 
     static async findByUser(user_id, user_type) {
         const [rows] = await pool.execute(
-            'SELECT * FROM enrollments WHERE user_id = ? AND user_type = ? ORDER BY created_at DESC',
-            [user_id, user_type]
+            'SELECT * FROM enrollments ORDER BY created_at DESC'
         );
         return rows;
     }
 
     static async getCountByUser(user_id, user_type) {
         const [rows] = await pool.execute(
-            'SELECT COUNT(*)::int as total FROM enrollments WHERE user_id = ? AND user_type = ?',
-            [user_id, user_type]
+            'SELECT COUNT(*)::int as total FROM enrollments'
         );
         return rows[0].total;
     }
 
     static async getCountByStatus(user_id, user_type) {
         const [rows] = await pool.execute(
-            'SELECT status, COUNT(*)::int as count FROM enrollments WHERE user_id = ? AND user_type = ? GROUP BY status',
-            [user_id, user_type]
+            'SELECT status, COUNT(*)::int as count FROM enrollments GROUP BY status'
         );
         return rows;
     }
 
     static async updateStatus(id, user_id, user_type, status) {
         const [rows] = await pool.execute(
-            'UPDATE enrollments SET status = ? WHERE id = ? AND user_id = ? AND user_type = ? RETURNING *',
-            [status, id, user_id, user_type]
+            'UPDATE enrollments SET status = ? WHERE id = ? RETURNING *',
+            [status, id]
         );
         return rows[0];
     }
@@ -50,7 +47,7 @@ class Enrollment {
                  lead_source = ?,
                  status = ?,
                  notes = ?
-             WHERE id = ? AND user_id = ? AND user_type = ?
+             WHERE id = ?
              RETURNING *`,
             [
                 data.client_name,
@@ -59,9 +56,7 @@ class Enrollment {
                 data.lead_source,
                 data.status,
                 data.notes,
-                id,
-                user_id,
-                user_type
+                id
             ]
         );
         return rows[0];
@@ -69,8 +64,8 @@ class Enrollment {
 
     static async delete(id, user_id, user_type) {
         const [rows] = await pool.execute(
-            'DELETE FROM enrollments WHERE id = ? AND user_id = ? AND user_type = ? RETURNING id',
-            [id, user_id, user_type]
+            'DELETE FROM enrollments WHERE id = ? RETURNING id',
+            [id]
         );
         return rows[0];
     }
