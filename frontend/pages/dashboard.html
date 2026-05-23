@@ -312,11 +312,17 @@
     <div id="enrollmentModal" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-head">
-                <h3>New Enrollment</h3>
-                <button class="modal-close" onclick="closeEnrollmentModal()">&times;</button>
+                <h3 id="enrollmentModalTitle">New Enrollment</h3>
+                <button class="modal-close" onclick="closeEnrollmentModal()" aria-label="Close enrollment form">
+                    <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
             </div>
             <div class="modal-body">
                 <form id="enrollmentForm">
+                    <input type="hidden" id="enrollmentId">
                     <div class="form-group">
                         <label>Client Name *</label>
                         <input type="text" id="clientName" class="form-control" placeholder="Enter client name" required>
@@ -355,7 +361,7 @@
                         <label>Notes</label>
                         <textarea id="clientNotes" class="form-control" rows="3" placeholder="Additional notes..."></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;">Save Enrollment</button>
+                    <button type="submit" class="btn btn-primary" id="enrollmentSubmitBtn" style="width:100%;">Save Enrollment</button>
                 </form>
             </div>
         </div>

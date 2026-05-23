@@ -10,6 +10,7 @@ var currentUser = JSON.parse(userData);
 var currentMonth = new Date().getMonth();
 var currentYear = new Date().getFullYear();
 var draggedEnrollmentId = null;
+var enrollmentsById = {};
 var tasksCache = [];
 var tasksById = {};
 var taskCacheLoaded = false;
@@ -31,7 +32,9 @@ var iconPaths = {
     user: '<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>',
     briefcase: '<rect width="20" height="14" x="2" y="7" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path><path d="M2 12h20"></path>',
     building: '<path d="M3 21h18"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path><path d="M9 8h1"></path><path d="M14 8h1"></path><path d="M9 12h1"></path><path d="M14 12h1"></path><path d="M9 16h1"></path><path d="M14 16h1"></path>',
-    grip: '<circle cx="9" cy="7" r="1"></circle><circle cx="15" cy="7" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="17" r="1"></circle><circle cx="15" cy="17" r="1"></circle>'
+    grip: '<circle cx="9" cy="7" r="1"></circle><circle cx="15" cy="7" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="17" r="1"></circle><circle cx="15" cy="17" r="1"></circle>',
+    pencil: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>',
+    trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>'
 };
 
 function iconSvg(name, extraClass) {
@@ -99,6 +102,13 @@ function setTaskCache(tasks) {
     taskCacheLoaded = true;
 }
 
+function setEnrollmentCache(enrollments) {
+    enrollmentsById = {};
+    (Array.isArray(enrollments) ? enrollments : []).forEach(function(enrollment) {
+        enrollmentsById[String(enrollment.id)] = enrollment;
+    });
+}
+
 async function refreshTaskCache() {
     const response = await fetch(API_URL + '/crm/tasks', {
         headers: { 'Authorization': 'Bearer ' + token }
@@ -137,7 +147,13 @@ function renderClientInfoCard(enrollment, options) {
     html += '>';
     html += '<div class="client-card-head">';
     html += '<div><span class="card-kicker">Client</span><h4>' + escapeHtml(enrollment.client_name) + '</h4></div>';
+    html += '<div class="client-card-head-actions">';
     html += '<span class="status-badge st-' + status + '">' + statusLabels[status] + '</span>';
+    html += '<div class="client-card-actions">';
+    html += '<button type="button" class="card-icon-btn" onclick="openEditEnrollmentModal(event, ' + enrollment.id + ')" aria-label="Edit client">' + iconSvg('pencil') + '</button>';
+    html += '<button type="button" class="card-icon-btn danger" onclick="deleteEnrollment(event, ' + enrollment.id + ')" aria-label="Delete client">' + iconSvg('trash') + '</button>';
+    html += '</div>';
+    html += '</div>';
     html += '</div>';
     
     html += '<div class="info-list">';
@@ -236,6 +252,7 @@ async function loadEnrollments() {
         
         if (response.ok) {
             const data = await response.json();
+            setEnrollmentCache(data.enrollments);
             displayEnrollments(data.enrollments);
         }
     } catch (error) {
@@ -281,37 +298,109 @@ async function updateEnrollmentStatus(id, status, options) {
         }
         showToast('Status updated!', 'success');
         if (!options.skipReload) {
-            loadDashboardData();
-            loadEnrollments();
+            await refreshEnrollmentViews();
         }
     } catch (error) {
         showToast('Error updating status', 'error');
     }
 }
 
-function openEnrollmentModal() {
+function resetEnrollmentForm() {
+    document.getElementById('enrollmentId').value = '';
+    document.getElementById('enrollmentForm').reset();
+    document.getElementById('enrollmentModalTitle').textContent = 'New Enrollment';
+    document.getElementById('enrollmentSubmitBtn').textContent = 'Save Enrollment';
+}
+
+function openEnrollmentModal(enrollment) {
+    resetEnrollmentForm();
+
+    if (enrollment) {
+        document.getElementById('enrollmentId').value = enrollment.id;
+        document.getElementById('clientName').value = enrollment.client_name || '';
+        document.getElementById('clientEmail').value = enrollment.client_email || '';
+        document.getElementById('clientPhone').value = enrollment.client_phone || '';
+        document.getElementById('leadSource').value = enrollment.lead_source || '';
+        document.getElementById('enrollmentStatus').value = getStatusClass(enrollment.status);
+        document.getElementById('clientNotes').value = enrollment.notes || '';
+        document.getElementById('enrollmentModalTitle').textContent = 'Edit Enrollment';
+        document.getElementById('enrollmentSubmitBtn').textContent = 'Save Changes';
+    }
+
     document.getElementById('enrollmentModal').style.display = 'block';
 }
 
 function closeEnrollmentModal() {
     document.getElementById('enrollmentModal').style.display = 'none';
+    resetEnrollmentForm();
+}
+
+function openEditEnrollmentModal(event, id) {
+    event.stopPropagation();
+    const enrollment = enrollmentsById[String(id)];
+    if (!enrollment) {
+        showToast('Client details are still loading', 'error');
+        return;
+    }
+
+    openEnrollmentModal(enrollment);
+}
+
+async function refreshEnrollmentViews() {
+    loadDashboardData();
+    await loadEnrollments();
+    loadEnrollmentOptions();
+    if (document.getElementById('pipelinePage').classList.contains('active')) {
+        await loadPipeline();
+    }
+}
+
+async function deleteEnrollment(event, id) {
+    event.stopPropagation();
+    if (!confirm('Delete this client card? Linked tasks will stay, but the client link will be removed.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(API_URL + '/crm/enrollments/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.error || 'Delete failed');
+        }
+
+        showToast('Client deleted', 'success');
+        await refreshEnrollmentViews();
+        if (taskCacheLoaded) {
+            await loadTasks();
+            if (document.getElementById('calendarPage').classList.contains('active')) {
+                await renderCalendar();
+            }
+        }
+    } catch (error) {
+        showToast(error.message || 'Error deleting client', 'error');
+    }
 }
 
 document.getElementById('enrollmentForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const enrollmentId = document.getElementById('enrollmentId').value;
     
     const data = {
-        client_name: document.getElementById('clientName').value,
-        client_email: document.getElementById('clientEmail').value,
-        client_phone: document.getElementById('clientPhone').value,
+        client_name: document.getElementById('clientName').value.trim(),
+        client_email: document.getElementById('clientEmail').value.trim(),
+        client_phone: document.getElementById('clientPhone').value.trim(),
         lead_source: document.getElementById('leadSource').value,
         status: document.getElementById('enrollmentStatus').value,
-        notes: document.getElementById('clientNotes').value
+        notes: document.getElementById('clientNotes').value.trim()
     };
     
     try {
-        const response = await fetch(API_URL + '/crm/enrollments', {
-            method: 'POST',
+        const response = await fetch(API_URL + '/crm/enrollments' + (enrollmentId ? '/' + enrollmentId : ''), {
+            method: enrollmentId ? 'PATCH' : 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token
@@ -320,15 +409,12 @@ document.getElementById('enrollmentForm').addEventListener('submit', async (e) =
         });
         
         if (response.ok) {
-            showToast('Enrollment added!', 'success');
+            showToast(enrollmentId ? 'Client updated!' : 'Enrollment added!', 'success');
             closeEnrollmentModal();
-            document.getElementById('enrollmentForm').reset();
-            loadEnrollments();
-            loadEnrollmentOptions();
-            loadDashboardData();
+            await refreshEnrollmentViews();
         } else {
             const result = await response.json();
-            showToast(result.error || 'Failed to add enrollment', 'error');
+            showToast(result.error || 'Failed to save enrollment', 'error');
         }
     } catch (error) {
         showToast('Connection error', 'error');
@@ -545,6 +631,7 @@ async function loadPipeline() {
         
         if (response.ok) {
             const data = await response.json();
+            setEnrollmentCache(data.enrollments);
             displayPipeline(data.enrollments);
         }
     } catch (error) {

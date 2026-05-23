@@ -33,15 +33,46 @@ class Enrollment {
         return rows;
     }
 
-    static async updateStatus(id, status) {
-        await pool.execute(
-            'UPDATE enrollments SET status = ? WHERE id = ?',
-            [status, id]
+    static async updateStatus(id, user_id, user_type, status) {
+        const [rows] = await pool.execute(
+            'UPDATE enrollments SET status = ? WHERE id = ? AND user_id = ? AND user_type = ? RETURNING *',
+            [status, id, user_id, user_type]
         );
+        return rows[0];
     }
 
-    static async delete(id) {
-        await pool.execute('DELETE FROM enrollments WHERE id = ?', [id]);
+    static async update(id, user_id, user_type, data) {
+        const [rows] = await pool.execute(
+            `UPDATE enrollments
+             SET client_name = ?,
+                 client_email = ?,
+                 client_phone = ?,
+                 lead_source = ?,
+                 status = ?,
+                 notes = ?
+             WHERE id = ? AND user_id = ? AND user_type = ?
+             RETURNING *`,
+            [
+                data.client_name,
+                data.client_email,
+                data.client_phone,
+                data.lead_source,
+                data.status,
+                data.notes,
+                id,
+                user_id,
+                user_type
+            ]
+        );
+        return rows[0];
+    }
+
+    static async delete(id, user_id, user_type) {
+        const [rows] = await pool.execute(
+            'DELETE FROM enrollments WHERE id = ? AND user_id = ? AND user_type = ? RETURNING id',
+            [id, user_id, user_type]
+        );
+        return rows[0];
     }
 }
 

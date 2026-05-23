@@ -2781,6 +2781,51 @@ body.dashboard-shell::after {
     margin-bottom: 0.9rem;
 }
 
+.client-card-head-actions {
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
+.client-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.dashboard-shell .card-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--dash-border);
+    background: var(--dash-surface-soft);
+    color: var(--dash-muted);
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.dashboard-shell .card-icon-btn .icon {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+.dashboard-shell .card-icon-btn:hover {
+    background: var(--dash-accent-soft);
+    border-color: rgba(81, 116, 147, 0.3);
+    color: var(--dash-accent);
+}
+
+.dashboard-shell .card-icon-btn.danger:hover {
+    background: rgba(86, 6, 29, 0.08);
+    border-color: rgba(86, 6, 29, 0.18);
+    color: var(--dash-rose);
+}
+
 .client-card-head h4 {
     font-size: 1.08rem;
     line-height: 1.25;

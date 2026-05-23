@@ -1,6 +1,12 @@
 ﻿const Enrollment = require('../models/Enrollment');
 const Task = require('../models/Task');
 
+const enrollmentStatuses = ['unaware', 'aware', 'interested', 'student'];
+
+function isValidEnrollmentStatus(status) {
+    return enrollmentStatuses.indexOf(status) >= 0;
+}
+
 exports.getDashboardStats = async (req, res) => {
     try {
         const { id, type } = req.user;
@@ -37,6 +43,10 @@ exports.createEnrollment = async (req, res) => {
         if (!client_name || !client_email || !client_phone) {
             return res.status(400).json({ error: 'Name, email, and phone are required' });
         }
+
+        if (status && !isValidEnrollmentStatus(status)) {
+            return res.status(400).json({ error: 'Invalid enrollment status' });
+        }
         
         const enrollment = await Enrollment.create({
             user_id: id,
@@ -69,13 +79,73 @@ exports.getEnrollments = async (req, res) => {
 
 exports.updateEnrollmentStatus = async (req, res) => {
     try {
+        const { id, type } = req.user;
         const { enrollmentId } = req.params;
         const { status } = req.body;
+
+        if (!isValidEnrollmentStatus(status)) {
+            return res.status(400).json({ error: 'Invalid enrollment status' });
+        }
         
-        await Enrollment.updateStatus(enrollmentId, status);
-        res.json({ message: 'Status updated' });
+        const enrollment = await Enrollment.updateStatus(enrollmentId, id, type, status);
+        if (!enrollment) {
+            return res.status(404).json({ error: 'Enrollment not found' });
+        }
+
+        res.json({ message: 'Status updated', enrollment });
     } catch (error) {
         console.error('Update enrollment error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.updateEnrollment = async (req, res) => {
+    try {
+        const { id, type } = req.user;
+        const { enrollmentId } = req.params;
+        const { client_name, client_email, client_phone, lead_source, status, notes } = req.body;
+
+        if (!client_name || !client_email || !client_phone) {
+            return res.status(400).json({ error: 'Name, email, and phone are required' });
+        }
+
+        if (status && !isValidEnrollmentStatus(status)) {
+            return res.status(400).json({ error: 'Invalid enrollment status' });
+        }
+
+        const enrollment = await Enrollment.update(enrollmentId, id, type, {
+            client_name,
+            client_email,
+            client_phone,
+            lead_source: lead_source || 'Other',
+            status: status || 'unaware',
+            notes: notes || ''
+        });
+
+        if (!enrollment) {
+            return res.status(404).json({ error: 'Enrollment not found' });
+        }
+
+        res.json({ message: 'Enrollment updated', enrollment });
+    } catch (error) {
+        console.error('Update enrollment error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.deleteEnrollment = async (req, res) => {
+    try {
+        const { id, type } = req.user;
+        const { enrollmentId } = req.params;
+        const deletedEnrollment = await Enrollment.delete(enrollmentId, id, type);
+
+        if (!deletedEnrollment) {
+            return res.status(404).json({ error: 'Enrollment not found' });
+        }
+
+        res.json({ message: 'Enrollment deleted' });
+    } catch (error) {
+        console.error('Delete enrollment error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
