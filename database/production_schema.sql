@@ -56,6 +56,22 @@ BEFORE UPDATE ON individuals
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
+CREATE TABLE IF NOT EXISTS courses (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (price >= 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_courses_name ON courses(name);
+
+DROP TRIGGER IF EXISTS set_courses_updated_at ON courses;
+CREATE TRIGGER set_courses_updated_at
+BEFORE UPDATE ON courses
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
 CREATE TABLE IF NOT EXISTS enrollments (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
@@ -65,13 +81,32 @@ CREATE TABLE IF NOT EXISTS enrollments (
     client_phone VARCHAR(20) NOT NULL,
     lead_source VARCHAR(50),
     status VARCHAR(20) DEFAULT 'unaware' CHECK (status IN ('unaware', 'aware', 'interested', 'student')),
+    course_id INT,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS course_id INT;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_enrollments_course'
+    ) THEN
+        ALTER TABLE enrollments
+        ADD CONSTRAINT fk_enrollments_course
+        FOREIGN KEY (course_id) REFERENCES courses(id)
+        ON DELETE SET NULL;
+    END IF;
+END;
+$$;
+
 CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments(user_id, user_type);
 CREATE INDEX IF NOT EXISTS idx_enrollments_status ON enrollments(status);
+CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id);
 
 DROP TRIGGER IF EXISTS set_enrollments_updated_at ON enrollments;
 CREATE TRIGGER set_enrollments_updated_at

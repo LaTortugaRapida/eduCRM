@@ -59,7 +59,13 @@ const requiredSchema = {
         'client_phone',
         'lead_source',
         'status',
+        'course_id',
         'notes'
+    ],
+    courses: [
+        'id',
+        'name',
+        'price'
     ],
     tasks: [
         'id',

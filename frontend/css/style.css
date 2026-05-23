@@ -2663,6 +2663,71 @@ body.dashboard-shell::after {
     margin-bottom: 2rem;
 }
 
+.dashboard-shell .course-section {
+    background: var(--dash-surface);
+    background-image: radial-gradient(circle, rgba(81, 116, 147, 0.04) 0 0.7px, transparent 1px);
+    background-size: 18px 18px;
+    border: 1px solid var(--dash-border);
+    border-radius: 8px;
+    box-shadow: var(--dash-shadow-soft);
+    padding: 1rem;
+}
+
+.dashboard-shell .course-form {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(120px, 180px) auto auto;
+    gap: 0.75rem;
+    align-items: end;
+    margin-bottom: 0.9rem;
+}
+
+.dashboard-shell .course-form .form-group {
+    margin-bottom: 0;
+}
+
+.dashboard-shell .course-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.65rem;
+}
+
+.dashboard-shell .course-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.7rem;
+    border: 1px solid var(--dash-border);
+    border-radius: 8px;
+    background: var(--dash-surface-soft);
+}
+
+.course-row-main {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.course-row-main strong,
+.course-row-main span {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.course-row-main span {
+    color: var(--dash-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.course-actions {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
 .dashboard-shell .section-head {
     margin-bottom: 1rem;
 }
@@ -3702,6 +3767,10 @@ body.dashboard-shell::after {
         align-items: flex-start;
         flex-direction: column;
         gap: 0.75rem;
+    }
+
+    .dashboard-shell .course-form {
+        grid-template-columns: 1fr;
     }
 
     .dashboard-shell .enrollment-card {

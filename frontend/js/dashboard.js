@@ -11,6 +11,8 @@ var currentMonth = new Date().getMonth();
 var currentYear = new Date().getFullYear();
 var draggedEnrollmentId = null;
 var enrollmentsById = {};
+var coursesCache = [];
+var coursesById = {};
 var tasksCache = [];
 var tasksById = {};
 var taskCacheLoaded = false;
@@ -32,6 +34,8 @@ var iconPaths = {
     user: '<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>',
     briefcase: '<rect width="20" height="14" x="2" y="7" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path><path d="M2 12h20"></path>',
     building: '<path d="M3 21h18"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path><path d="M9 8h1"></path><path d="M14 8h1"></path><path d="M9 12h1"></path><path d="M14 12h1"></path><path d="M9 16h1"></path><path d="M14 16h1"></path>',
+    book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path>',
+    tag: '<path d="M20.6 13.2 13.2 20.6a2 2 0 0 1-2.8 0L3 13.2V3h10.2l7.4 7.4a2 2 0 0 1 0 2.8Z"></path><circle cx="7.5" cy="7.5" r=".5"></circle>',
     grip: '<circle cx="9" cy="7" r="1"></circle><circle cx="15" cy="7" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="17" r="1"></circle><circle cx="15" cy="17" r="1"></circle>',
     pencil: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>',
     trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>'
@@ -109,6 +113,21 @@ function setEnrollmentCache(enrollments) {
     });
 }
 
+function setCourseCache(courses) {
+    coursesCache = Array.isArray(courses) ? courses : [];
+    coursesById = {};
+    coursesCache.forEach(function(course) {
+        coursesById[String(course.id)] = course;
+    });
+}
+
+function formatCurrency(value) {
+    return '$' + Number(value || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
+}
+
 async function refreshTaskCache() {
     const response = await fetch(API_URL + '/crm/tasks', {
         headers: { 'Authorization': 'Bearer ' + token }
@@ -160,6 +179,9 @@ function renderClientInfoCard(enrollment, options) {
     html += infoRow('mail', 'Email', enrollment.client_email);
     html += infoRow('phone', 'Phone', enrollment.client_phone);
     html += infoRow('pin', 'Source', enrollment.lead_source || 'N/A');
+    if (enrollment.status === 'student' && enrollment.course_name) {
+        html += infoRow('book', 'Course', enrollment.course_name + ' - ' + formatCurrency(enrollment.course_price));
+    }
     if (enrollment.notes) {
         html += infoRow('note', 'Notes', truncateText(enrollment.notes, 80));
     }
@@ -168,7 +190,7 @@ function renderClientInfoCard(enrollment, options) {
     if (options.pipeline) {
         html += '<div class="drag-hint">' + iconSvg('grip') + '<span>Drag to update status</span></div>';
     } else {
-        html += '<select class="status-select-mini" onchange="updateEnrollmentStatus(' + enrollment.id + ', this.value)">';
+        html += '<select class="status-select-mini" onchange="updateEnrollmentStatusFromSelect(event, ' + enrollment.id + ')">';
         html += '<option value="unaware"' + (status === 'unaware' ? ' selected' : '') + '>Unaware</option>';
         html += '<option value="aware"' + (status === 'aware' ? ' selected' : '') + '>Aware</option>';
         html += '<option value="interested"' + (status === 'interested' ? ' selected' : '') + '>Interested</option>';
@@ -186,6 +208,7 @@ document.getElementById('userNameDisplay').textContent =
 
 // Load initial data
 loadDashboardData();
+loadCourses();
 loadEnrollments();
 loadTasks();
 loadEnrollmentOptions();
@@ -236,7 +259,7 @@ async function loadDashboardData() {
             document.getElementById('totalClients').textContent = data.stats.totalClients;
             document.getElementById('activeTasks').textContent = data.stats.activeTasks;
             document.getElementById('totalStudents').textContent = data.stats.students;
-            document.getElementById('totalProfit').textContent = '$' + data.stats.profit.toLocaleString();
+            document.getElementById('totalProfit').textContent = formatCurrency(data.stats.profit);
         }
     } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -244,6 +267,133 @@ async function loadDashboardData() {
 }
 
 // ============ ENROLLMENTS ============
+async function loadCourses() {
+    try {
+        const response = await fetch(API_URL + '/crm/courses', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            setCourseCache(data.courses);
+            displayCourses(data.courses);
+            populateCourseSelects();
+        }
+    } catch (error) {
+        console.error('Error loading courses:', error);
+    }
+}
+
+function populateCourseSelects() {
+    const select = document.getElementById('enrollmentCourse');
+    if (!select) return;
+
+    const selectedValue = select.value;
+    let html = '<option value="">Select course</option>';
+    coursesCache.forEach(function(course) {
+        html += '<option value="' + course.id + '">' + escapeHtml(course.name) + ' - ' + formatCurrency(course.price) + '</option>';
+    });
+    select.innerHTML = html;
+    select.value = selectedValue;
+}
+
+function displayCourses(courses) {
+    const list = document.getElementById('coursesList');
+    if (!list) return;
+
+    if (!courses || courses.length === 0) {
+        list.innerHTML = '<div class="empty-state">No courses yet. Add one before moving clients to Student.</div>';
+        return;
+    }
+
+    let html = '';
+    courses.forEach(function(course) {
+        html += '<div class="course-row">';
+        html += '<div class="course-row-main">' + iconSvg('book', 'meta-icon') + '<div><strong>' + escapeHtml(course.name) + '</strong><span>' + formatCurrency(course.price) + '</span></div></div>';
+        html += '<div class="course-actions">';
+        html += '<button type="button" class="card-icon-btn" onclick="editCourse(' + course.id + ')" aria-label="Edit course">' + iconSvg('pencil') + '</button>';
+        html += '<button type="button" class="card-icon-btn danger" onclick="deleteCourse(' + course.id + ')" aria-label="Delete course">' + iconSvg('trash') + '</button>';
+        html += '</div>';
+        html += '</div>';
+    });
+    list.innerHTML = html;
+}
+
+function resetCourseForm() {
+    document.getElementById('courseId').value = '';
+    document.getElementById('courseName').value = '';
+    document.getElementById('coursePrice').value = '';
+    document.getElementById('courseSubmitBtn').textContent = 'Save Course';
+}
+
+function editCourse(id) {
+    const course = coursesById[String(id)];
+    if (!course) return;
+
+    document.getElementById('courseId').value = course.id;
+    document.getElementById('courseName').value = course.name;
+    document.getElementById('coursePrice').value = course.price;
+    document.getElementById('courseSubmitBtn').textContent = 'Save Changes';
+    document.getElementById('courseName').focus();
+}
+
+async function deleteCourse(id) {
+    if (!confirm('Delete this course? Students assigned to it will keep Student status but lose the course price.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(API_URL + '/crm/courses/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.error || 'Delete failed');
+        }
+
+        showToast('Course deleted', 'success');
+        await loadCourses();
+        await refreshEnrollmentViews();
+    } catch (error) {
+        showToast(error.message || 'Error deleting course', 'error');
+    }
+}
+
+document.getElementById('courseForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const courseId = document.getElementById('courseId').value;
+    const data = {
+        name: document.getElementById('courseName').value.trim(),
+        price: document.getElementById('coursePrice').value
+    };
+
+    try {
+        const response = await fetch(API_URL + '/crm/courses' + (courseId ? '/' + courseId : ''), {
+            method: courseId ? 'PATCH' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showToast(courseId ? 'Course updated' : 'Course added', 'success');
+            resetCourseForm();
+            await loadCourses();
+            await refreshEnrollmentViews();
+        } else {
+            const result = await response.json();
+            showToast(result.error || 'Failed to save course', 'error');
+        }
+    } catch (error) {
+        showToast('Connection error', 'error');
+    }
+});
+
 async function loadEnrollments() {
     try {
         const response = await fetch(API_URL + '/crm/enrollments', {
@@ -291,18 +441,40 @@ async function updateEnrollmentStatus(id, status, options) {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token
             },
-            body: JSON.stringify({ status: status })
+            body: JSON.stringify({
+                status: status,
+                course_id: options.course_id || null
+            })
         });
         if (!response.ok) {
-            throw new Error('Status update failed');
+            const result = await response.json();
+            throw new Error(result.error || 'Status update failed');
         }
         showToast('Status updated!', 'success');
         if (!options.skipReload) {
             await refreshEnrollmentViews();
         }
     } catch (error) {
-        showToast('Error updating status', 'error');
+        showToast(error.message || 'Error updating status', 'error');
     }
+}
+
+function updateEnrollmentStatusFromSelect(event, id) {
+    const select = event.target;
+    const status = select.value;
+    const enrollment = enrollmentsById[String(id)];
+    const courseId = enrollment ? enrollment.course_id : null;
+
+    if (status === 'student' && !courseId) {
+        if (enrollment) {
+            openEnrollmentModal(Object.assign({}, enrollment, { status: 'student' }));
+            select.value = getStatusClass(enrollment.status);
+        }
+        showToast('Select a course for this student', 'error');
+        return;
+    }
+
+    updateEnrollmentStatus(id, status, { course_id: courseId });
 }
 
 function resetEnrollmentForm() {
@@ -310,10 +482,12 @@ function resetEnrollmentForm() {
     document.getElementById('enrollmentForm').reset();
     document.getElementById('enrollmentModalTitle').textContent = 'New Enrollment';
     document.getElementById('enrollmentSubmitBtn').textContent = 'Save Enrollment';
+    toggleEnrollmentCourseField();
 }
 
 function openEnrollmentModal(enrollment) {
     resetEnrollmentForm();
+    populateCourseSelects();
 
     if (enrollment) {
         document.getElementById('enrollmentId').value = enrollment.id;
@@ -322,12 +496,23 @@ function openEnrollmentModal(enrollment) {
         document.getElementById('clientPhone').value = enrollment.client_phone || '';
         document.getElementById('leadSource').value = enrollment.lead_source || '';
         document.getElementById('enrollmentStatus').value = getStatusClass(enrollment.status);
+        document.getElementById('enrollmentCourse').value = enrollment.course_id || '';
         document.getElementById('clientNotes').value = enrollment.notes || '';
         document.getElementById('enrollmentModalTitle').textContent = 'Edit Enrollment';
         document.getElementById('enrollmentSubmitBtn').textContent = 'Save Changes';
+        toggleEnrollmentCourseField();
     }
 
     document.getElementById('enrollmentModal').style.display = 'block';
+}
+
+function toggleEnrollmentCourseField() {
+    const group = document.getElementById('enrollmentCourseGroup');
+    const status = document.getElementById('enrollmentStatus').value;
+    if (!group) return;
+
+    group.style.display = status === 'student' ? 'block' : 'none';
+    document.getElementById('enrollmentCourse').required = status === 'student';
 }
 
 function closeEnrollmentModal() {
@@ -395,6 +580,7 @@ document.getElementById('enrollmentForm').addEventListener('submit', async (e) =
         client_phone: document.getElementById('clientPhone').value.trim(),
         lead_source: document.getElementById('leadSource').value,
         status: document.getElementById('enrollmentStatus').value,
+        course_id: document.getElementById('enrollmentCourse').value || null,
         notes: document.getElementById('clientNotes').value.trim()
     };
     
@@ -705,7 +891,17 @@ async function drop(event) {
     const enrollmentId = event.dataTransfer.getData("text") || draggedEnrollmentId;
     
     if (enrollmentId && newStatus) {
-        await updateEnrollmentStatus(enrollmentId, newStatus, { skipReload: true });
+        const enrollment = enrollmentsById[String(enrollmentId)];
+        const courseId = enrollment ? enrollment.course_id : null;
+        if (newStatus === 'student' && !courseId) {
+            if (enrollment) {
+                openEnrollmentModal(Object.assign({}, enrollment, { status: 'student' }));
+            }
+            showToast('Select a course for this student', 'error');
+            return;
+        }
+
+        await updateEnrollmentStatus(enrollmentId, newStatus, { skipReload: true, course_id: courseId });
         loadDashboardData();
         loadPipeline();
         loadEnrollments();
