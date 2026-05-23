@@ -2,11 +2,11 @@
 
 class Task {
     static async create({ user_id, user_type, title, description, priority, due_date, enrollment_id }) {
-        const [result] = await pool.execute(
-            'INSERT INTO tasks (user_id, user_type, title, description, priority, due_date, enrollment_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        const [rows] = await pool.execute(
+            'INSERT INTO tasks (user_id, user_type, title, description, priority, due_date, enrollment_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id',
             [user_id, user_type, title, description, priority, due_date, enrollment_id || null]
         );
-        return { id: result.insertId, title, status: 'pending' };
+        return { id: rows[0].id, title, status: 'pending' };
     }
 
     static async findByUser(user_id, user_type) {

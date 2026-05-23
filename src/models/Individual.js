@@ -5,12 +5,12 @@ class Individual {
     static async create({ name, email, password, phone, position, institution_id }) {
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        const [result] = await pool.execute(
-            'INSERT INTO individuals (name, email, password, phone, position, institution_id) VALUES (?, ?, ?, ?, ?, ?)',
+        const [rows] = await pool.execute(
+            'INSERT INTO individuals (name, email, password, phone, position, institution_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
             [name, email, hashedPassword, phone, position, institution_id]
         );
         
-        return { id: result.insertId, name, email, phone, position };
+        return { id: rows[0].id, name, email, phone, position };
     }
 
     static async findByEmail(email) {

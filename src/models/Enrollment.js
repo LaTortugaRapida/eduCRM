@@ -2,11 +2,11 @@
 
 class Enrollment {
     static async create({ user_id, user_type, client_name, client_email, client_phone, lead_source, status, notes }) {
-        const [result] = await pool.execute(
-            'INSERT INTO enrollments (user_id, user_type, client_name, client_email, client_phone, lead_source, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        const [rows] = await pool.execute(
+            'INSERT INTO enrollments (user_id, user_type, client_name, client_email, client_phone, lead_source, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id',
             [user_id, user_type, client_name, client_email, client_phone, lead_source, status, notes]
         );
-        return { id: result.insertId, client_name, client_email, status };
+        return { id: rows[0].id, client_name, client_email, status };
     }
 
     static async findByUser(user_id, user_type) {
@@ -19,7 +19,7 @@ class Enrollment {
 
     static async getCountByUser(user_id, user_type) {
         const [rows] = await pool.execute(
-            'SELECT COUNT(*) as total FROM enrollments WHERE user_id = ? AND user_type = ?',
+            'SELECT COUNT(*)::int as total FROM enrollments WHERE user_id = ? AND user_type = ?',
             [user_id, user_type]
         );
         return rows[0].total;
@@ -27,7 +27,7 @@ class Enrollment {
 
     static async getCountByStatus(user_id, user_type) {
         const [rows] = await pool.execute(
-            'SELECT status, COUNT(*) as count FROM enrollments WHERE user_id = ? AND user_type = ? GROUP BY status',
+            'SELECT status, COUNT(*)::int as count FROM enrollments WHERE user_id = ? AND user_type = ? GROUP BY status',
             [user_id, user_type]
         );
         return rows;

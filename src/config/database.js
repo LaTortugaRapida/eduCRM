@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 function readBoolean(value, defaultValue) {
@@ -9,50 +9,12 @@ function readBoolean(value, defaultValue) {
     return ['1', 'true', 'yes', 'required'].includes(String(value).toLowerCase());
 }
 
-function parseDatabaseUrl(value) {
-    try {
-        const parsedUrl = new URL(value);
-        if (!['mysql:', 'mysql2:'].includes(parsedUrl.protocol)) {
-            return null;
-        }
-
-        return parsedUrl;
-    } catch (error) {
-        return null;
-    }
-}
-
 function getDatabaseUrl() {
-    const urlEnvNames = ['MYSQL_URL', 'CLEARDB_DATABASE_URL', 'JAWSDB_URL', 'DATABASE_URL'];
-    const name = urlEnvNames.find((envName) => parseDatabaseUrl(process.env[envName]));
-
-    if (!name) {
-        return null;
-    }
-
-    return {
-        name,
-        url: parseDatabaseUrl(process.env[name])
-    };
+    return process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 }
 
-function databaseUrlRequiresSsl(databaseUrl) {
-    if (!databaseUrl) {
-        return false;
-    }
-
-    const sslMode = (
-        databaseUrl.url.searchParams.get('ssl-mode') ||
-        databaseUrl.url.searchParams.get('sslmode') ||
-        ''
-    ).toLowerCase();
-
-    return readBoolean(databaseUrl.url.searchParams.get('ssl'), false) ||
-        ['required', 'verify_ca', 'verify_identity'].includes(sslMode);
-}
-
-function buildSslOptions(databaseUrl) {
-    if (!readBoolean(process.env.DB_SSL, databaseUrlRequiresSsl(databaseUrl))) {
+function buildSslOptions() {
+    if (!readBoolean(process.env.DB_SSL, false)) {
         return undefined;
     }
 
@@ -61,7 +23,6 @@ function buildSslOptions(databaseUrl) {
     };
 }
 
-const requiredDbConfig = ['DB_HOST', 'DB_USER', 'DB_NAME'];
 const requiredSchema = {
     companies: [
         'id',
@@ -111,118 +72,129 @@ const requiredSchema = {
     ]
 };
 
-const activeDatabaseUrl = getDatabaseUrl();
-
 function getMissingDbConfig() {
-    if (activeDatabaseUrl) {
+    if (getDatabaseUrl()) {
         return [];
     }
 
-    return requiredDbConfig.filter((name) => !process.env[name]);
+    return ['PGHOST', 'PGUSER', 'PGDATABASE'].filter((name) => !process.env[name]);
 }
 
 function buildPoolConfig() {
+    const databaseUrl = getDatabaseUrl();
     const sharedConfig = {
-        waitForConnections: true,
-        connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
-        queueLimit: 0,
-        ssl: buildSslOptions(activeDatabaseUrl)
+        max: Number(process.env.DB_CONNECTION_LIMIT || 10),
+        ssl: buildSslOptions()
     };
 
-    if (!activeDatabaseUrl) {
+    if (databaseUrl) {
         return {
-            host: process.env.DB_HOST,
-            port: Number(process.env.DB_PORT || 3306),
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
+            connectionString: databaseUrl,
             ...sharedConfig
         };
     }
 
     return {
-        host: activeDatabaseUrl.url.hostname,
-        port: Number(activeDatabaseUrl.url.port || 3306),
-        user: decodeURIComponent(activeDatabaseUrl.url.username),
-        password: decodeURIComponent(activeDatabaseUrl.url.password),
-        database: decodeURIComponent(activeDatabaseUrl.url.pathname.replace(/^\//, '')),
+        host: process.env.PGHOST,
+        port: Number(process.env.PGPORT || 5432),
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        database: process.env.PGDATABASE,
         ...sharedConfig
     };
 }
 
-const pool = mysql.createPool(buildPoolConfig());
+function convertPlaceholders(sql) {
+    let index = 0;
+    return sql.replace(/\?/g, () => `$${++index}`);
+}
 
-pool.getDiagnostics = async function getDiagnostics() {
-    const missingConfig = getMissingDbConfig();
-    const connection = {
-        databaseUrlConfigured: Boolean(activeDatabaseUrl),
-        databaseUrlEnv: activeDatabaseUrl ? activeDatabaseUrl.name : null,
-        hostConfigured: activeDatabaseUrl ? true : Boolean(process.env.DB_HOST),
-        userConfigured: activeDatabaseUrl ? true : Boolean(process.env.DB_USER),
-        databaseConfigured: activeDatabaseUrl ? true : Boolean(process.env.DB_NAME),
-        port: activeDatabaseUrl ? Number(activeDatabaseUrl.url.port || 3306) : Number(process.env.DB_PORT || 3306),
-        sslEnabled: Boolean(buildSslOptions(activeDatabaseUrl))
-    };
+const pgPool = new Pool(buildPoolConfig());
 
-    if (missingConfig.length) {
-        return {
-            ok: false,
-            status: 'configuration_error',
-            missingConfig,
-            connection
+const db = {
+    async execute(sql, params) {
+        const result = await pgPool.query(convertPlaceholders(sql), params || []);
+        return [result.rows, result];
+    },
+
+    async query(sql, params) {
+        return pgPool.query(convertPlaceholders(sql), params || []);
+    },
+
+    async getDiagnostics() {
+        const missingConfig = getMissingDbConfig();
+        const connection = {
+            databaseUrlConfigured: Boolean(getDatabaseUrl()),
+            hostConfigured: Boolean(process.env.PGHOST || getDatabaseUrl()),
+            userConfigured: Boolean(process.env.PGUSER || getDatabaseUrl()),
+            databaseConfigured: Boolean(process.env.PGDATABASE || getDatabaseUrl()),
+            port: Number(process.env.PGPORT || 5432),
+            sslEnabled: Boolean(buildSslOptions())
         };
-    }
 
-    await pool.query('SELECT 1 AS ok');
-
-    const tables = Object.keys(requiredSchema);
-    const tablePlaceholders = tables.map(() => '?').join(', ');
-    const [tableRows] = await pool.execute(
-        `SELECT TABLE_NAME
-         FROM information_schema.TABLES
-         WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME IN (${tablePlaceholders})`,
-        tables
-    );
-
-    const presentTables = tableRows.map((row) => row.TABLE_NAME);
-    const missingTables = tables.filter((table) => !presentTables.includes(table));
-    const [columnRows] = presentTables.length
-        ? await pool.execute(
-            `SELECT TABLE_NAME, COLUMN_NAME
-             FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME IN (${presentTables.map(() => '?').join(', ')})`,
-            presentTables
-        )
-        : [[]];
-
-    const columnsByTable = columnRows.reduce((memo, row) => {
-        if (!memo[row.TABLE_NAME]) {
-            memo[row.TABLE_NAME] = new Set();
+        if (missingConfig.length) {
+            return {
+                ok: false,
+                status: 'configuration_error',
+                missingConfig,
+                connection
+            };
         }
-        memo[row.TABLE_NAME].add(row.COLUMN_NAME);
-        return memo;
-    }, {});
 
-    const missingColumns = [];
-    presentTables.forEach((table) => {
-        requiredSchema[table].forEach((column) => {
-            if (!columnsByTable[table] || !columnsByTable[table].has(column)) {
-                missingColumns.push(`${table}.${column}`);
+        await pgPool.query('SELECT 1 AS ok');
+
+        const tables = Object.keys(requiredSchema);
+        const tableResult = await pgPool.query(
+            `SELECT table_name
+             FROM information_schema.tables
+             WHERE table_schema = 'public'
+             AND table_name = ANY($1::text[])`,
+            [tables]
+        );
+
+        const presentTables = tableResult.rows.map((row) => row.table_name);
+        const missingTables = tables.filter((table) => !presentTables.includes(table));
+        const columnResult = presentTables.length
+            ? await pgPool.query(
+                `SELECT table_name, column_name
+                 FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                 AND table_name = ANY($1::text[])`,
+                [presentTables]
+            )
+            : { rows: [] };
+
+        const columnsByTable = columnResult.rows.reduce((memo, row) => {
+            if (!memo[row.table_name]) {
+                memo[row.table_name] = new Set();
             }
+            memo[row.table_name].add(row.column_name);
+            return memo;
+        }, {});
+
+        const missingColumns = [];
+        presentTables.forEach((table) => {
+            requiredSchema[table].forEach((column) => {
+                if (!columnsByTable[table] || !columnsByTable[table].has(column)) {
+                    missingColumns.push(`${table}.${column}`);
+                }
+            });
         });
-    });
 
-    const schemaOk = missingTables.length === 0 && missingColumns.length === 0;
+        const schemaOk = missingTables.length === 0 && missingColumns.length === 0;
 
-    return {
-        ok: schemaOk,
-        status: schemaOk ? 'ok' : 'schema_error',
-        connection,
-        missingTables,
-        missingColumns
-    };
+        return {
+            ok: schemaOk,
+            status: schemaOk ? 'ok' : 'schema_error',
+            connection,
+            missingTables,
+            missingColumns
+        };
+    },
+
+    end() {
+        return pgPool.end();
+    }
 };
 
-module.exports = pool;
+module.exports = db;

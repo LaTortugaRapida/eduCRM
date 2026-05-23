@@ -5,12 +5,12 @@ class Company {
     static async create({ company_name, email, password, company_phone, owner_name, owner_phone }) {
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        const [result] = await pool.execute(
-            'INSERT INTO companies (company_name, email, password, company_phone, owner_name, owner_phone) VALUES (?, ?, ?, ?, ?, ?)',
+        const [rows] = await pool.execute(
+            'INSERT INTO companies (company_name, email, password, company_phone, owner_name, owner_phone) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
             [company_name, email, hashedPassword, company_phone, owner_name, owner_phone]
         );
         
-        return { id: result.insertId, company_name, email, company_phone, owner_name, owner_phone };
+        return { id: rows[0].id, company_name, email, company_phone, owner_name, owner_phone };
     }
 
     static async findByEmail(email) {
@@ -33,7 +33,7 @@ class Company {
 
     static async searchByEmail(email) {
         const [rows] = await pool.execute(
-            'SELECT id, company_name, email FROM companies WHERE email LIKE ? AND is_active = TRUE',
+            'SELECT id, company_name, email FROM companies WHERE email ILIKE ? AND is_active = TRUE',
             ['%' + email + '%']
         );
         return rows;
