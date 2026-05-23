@@ -9,8 +9,50 @@ function readBoolean(value, defaultValue) {
     return ['1', 'true', 'yes', 'required'].includes(String(value).toLowerCase());
 }
 
-function buildSslOptions() {
-    if (!readBoolean(process.env.DB_SSL, false)) {
+function parseDatabaseUrl(value) {
+    try {
+        const parsedUrl = new URL(value);
+        if (!['mysql:', 'mysql2:'].includes(parsedUrl.protocol)) {
+            return null;
+        }
+
+        return parsedUrl;
+    } catch (error) {
+        return null;
+    }
+}
+
+function getDatabaseUrl() {
+    const urlEnvNames = ['MYSQL_URL', 'CLEARDB_DATABASE_URL', 'JAWSDB_URL', 'DATABASE_URL'];
+    const name = urlEnvNames.find((envName) => parseDatabaseUrl(process.env[envName]));
+
+    if (!name) {
+        return null;
+    }
+
+    return {
+        name,
+        url: parseDatabaseUrl(process.env[name])
+    };
+}
+
+function databaseUrlRequiresSsl(databaseUrl) {
+    if (!databaseUrl) {
+        return false;
+    }
+
+    const sslMode = (
+        databaseUrl.url.searchParams.get('ssl-mode') ||
+        databaseUrl.url.searchParams.get('sslmode') ||
+        ''
+    ).toLowerCase();
+
+    return readBoolean(databaseUrl.url.searchParams.get('ssl'), false) ||
+        ['required', 'verify_ca', 'verify_identity'].includes(sslMode);
+}
+
+function buildSslOptions(databaseUrl) {
+    if (!readBoolean(process.env.DB_SSL, databaseUrlRequiresSsl(databaseUrl))) {
         return undefined;
     }
 
@@ -69,30 +111,57 @@ const requiredSchema = {
     ]
 };
 
+const activeDatabaseUrl = getDatabaseUrl();
+
 function getMissingDbConfig() {
+    if (activeDatabaseUrl) {
+        return [];
+    }
+
     return requiredDbConfig.filter((name) => !process.env[name]);
 }
 
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
-    queueLimit: 0,
-    ssl: buildSslOptions()
-});
+function buildPoolConfig() {
+    const sharedConfig = {
+        waitForConnections: true,
+        connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
+        queueLimit: 0,
+        ssl: buildSslOptions(activeDatabaseUrl)
+    };
+
+    if (!activeDatabaseUrl) {
+        return {
+            host: process.env.DB_HOST,
+            port: Number(process.env.DB_PORT || 3306),
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            ...sharedConfig
+        };
+    }
+
+    return {
+        host: activeDatabaseUrl.url.hostname,
+        port: Number(activeDatabaseUrl.url.port || 3306),
+        user: decodeURIComponent(activeDatabaseUrl.url.username),
+        password: decodeURIComponent(activeDatabaseUrl.url.password),
+        database: decodeURIComponent(activeDatabaseUrl.url.pathname.replace(/^\//, '')),
+        ...sharedConfig
+    };
+}
+
+const pool = mysql.createPool(buildPoolConfig());
 
 pool.getDiagnostics = async function getDiagnostics() {
     const missingConfig = getMissingDbConfig();
     const connection = {
-        hostConfigured: Boolean(process.env.DB_HOST),
-        userConfigured: Boolean(process.env.DB_USER),
-        databaseConfigured: Boolean(process.env.DB_NAME),
-        port: Number(process.env.DB_PORT || 3306),
-        sslEnabled: Boolean(buildSslOptions())
+        databaseUrlConfigured: Boolean(activeDatabaseUrl),
+        databaseUrlEnv: activeDatabaseUrl ? activeDatabaseUrl.name : null,
+        hostConfigured: activeDatabaseUrl ? true : Boolean(process.env.DB_HOST),
+        userConfigured: activeDatabaseUrl ? true : Boolean(process.env.DB_USER),
+        databaseConfigured: activeDatabaseUrl ? true : Boolean(process.env.DB_NAME),
+        port: activeDatabaseUrl ? Number(activeDatabaseUrl.url.port || 3306) : Number(process.env.DB_PORT || 3306),
+        sslEnabled: Boolean(buildSslOptions(activeDatabaseUrl))
     };
 
     if (missingConfig.length) {

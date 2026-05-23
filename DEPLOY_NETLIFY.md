@@ -27,6 +27,12 @@ SMTP_PASS=your-app-password
 FRONTEND_URL=https://your-netlify-site.netlify.app
 ```
 
+Instead of separate `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` values, you can set one MySQL connection string:
+
+```env
+MYSQL_URL=mysql://user:password@host:3306/database
+```
+
 If your MySQL provider requires encrypted connections, set `DB_SSL=true`. Some providers with self-signed certificates also need `DB_SSL_REJECT_UNAUTHORIZED=false`.
 
 Run `database/production_schema.sql` against the production MySQL database before using the app. After deployment, open:
