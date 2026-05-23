@@ -60,6 +60,13 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
     console.log('Server running on port ' + PORT);
+    pool.initializeSchema()
+        .then(() => {
+            console.log('Database schema ready');
+        })
+        .catch((error) => {
+            console.error('Database schema initialization error:', error);
+        });
 });
 
 module.exports = app;

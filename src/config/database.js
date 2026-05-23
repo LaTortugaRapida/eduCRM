@@ -1,4 +1,6 @@
 const { Pool } = require('pg');
+const fs = require('fs/promises');
+const path = require('path');
 require('dotenv').config();
 
 function readBoolean(value, defaultValue) {
@@ -190,6 +192,12 @@ const db = {
             missingTables,
             missingColumns
         };
+    },
+
+    async initializeSchema() {
+        const schemaPath = path.join(__dirname, '..', '..', 'database', 'production_schema.sql');
+        const schemaSql = await fs.readFile(schemaPath, 'utf8');
+        await pgPool.query(schemaSql);
     },
 
     end() {
